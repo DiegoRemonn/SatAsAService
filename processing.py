@@ -35,7 +35,7 @@ def process_image_collection(aoi):
         Cloud-masked mosaic of the image collection.
     """
     return ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
-   .filterDate('2021-01-01', '2021-12-31') \
+   .filterDate('2024-12-01', '2024-12-11') \
    .filter(ee.Filter.bounds(aoi)) \
    .map(mask_s2_clouds) \
    .median()
