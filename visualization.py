@@ -15,8 +15,16 @@ def create_map(center_coords, collection, vis_params):
         Object with the added Sentinel-2 layer.
     """
     m = ui.Map(center=center_coords, zoom=10) # Create a map object.
+    m.add_ee_layer(collection, vis_params, 'Sentinel-2 True Color') # Add the cloud-masked image to the map
+
+    ndvi_vis_params = {
+        'min': -1.0, # Minimum NDVI value
+        'max': 1.0, # Maximum NDVI value
+        'palette': ['black', 'gray', 'beige', 'lightgreen', 'green', 'darkgreen'] # Colors for NDVI visualization
+    }
+    m.add_ee_layer(collection.select('NDVI'), ndvi_vis_params, 'Sentinel-2 NDVI')
+
     m.addLayerControl() # Add Layer control for interactive layer management
-    m.add_ee_layer(collection, vis_params, 'Sentinel-2 Zaragoza') # Add the cloud-masked image to the map
     return m
 
 def save_map(m, filename):
