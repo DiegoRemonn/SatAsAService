@@ -2,7 +2,7 @@ from auth import authenticate_earth_engine
 from processing import process_image_collection
 from visualization import create_map, save_map, open_map
 from point_extraction import extract_point_values
-from config import ZARAGOZA_COORDS, AOI, VIS_PARAMS
+from config import ZARAGOZA_COORDS, AOI, VIS_PARAMS, LOCATIONS
 import ee
 
 def main():
@@ -33,6 +33,15 @@ def main():
     # Open the map in the browser
     open_map(html_file)
 
+    for lat, lon in LOCATIONS:
+        point = ee.Geometry.Point([lon, lat])
+        values = extract_point_values(collection, point) # Extract values at the given point
+
+        if values:
+            print(f"Values at point ({lat}, {lon}): {values})")
+        else:
+            print(f"Failed to extract values at point ({lat}, {lon}).")
+    '''
     # Ask the user for a point to extract values
     lat = float(input("Enter latitude for the point: "))
     lon = float(input("Enter longitude for the point: "))
@@ -45,6 +54,7 @@ def main():
         print(f"Values at point ({lat}, {lon}): {values})")
     else:
         print("Failed to extract values at the specified point.")
+    '''
 
 if __name__ == '__main__':
     main()
