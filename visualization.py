@@ -1,6 +1,8 @@
+from config import LOCATIONS
 import geemap as ui
 import webbrowser
 import os
+import ee
 
 def create_map(center_coords, collection, vis_params):
     """
@@ -12,7 +14,7 @@ def create_map(center_coords, collection, vis_params):
     :param vis_params: dict
         Visualization parameters for the layer.
     :return: geemap.Map
-        Object with the added Sentinel-2 layer.
+        Object with the added Sentinel-2 layer and location markers.
     """
     m = ui.Map(center=center_coords, zoom=10) # Create a map object.
     m.add_ee_layer(collection, vis_params, 'Sentinel-2 True Color') # Add the cloud-masked image to the map
@@ -23,6 +25,16 @@ def create_map(center_coords, collection, vis_params):
         'palette': ['black', 'gray', 'beige', 'lightgreen', 'green', 'darkgreen'] # Colors for NDVI visualization
     }
     m.add_ee_layer(collection.select('NDVI'), ndvi_vis_params, 'Sentinel-2 NDVI')
+
+    # Add location markers
+    for lat, lon in LOCATIONS:
+        point = ee.Geometry.Point([lon, lat])  # Create a point geometry
+        feature = ee.Feature(point)  # Convert to an EE Feature
+        feature_collection = ee.FeatureCollection([feature])  # Wrap in a FeatureCollection
+
+        # Add the marker to the map
+        marker_style = {'color': 'red'}  # Marker style (red points)
+        m.addLayer(feature_collection, marker_style, f"Point ({lat}, {lon})")
 
     m.addLayerControl() # Add Layer control for interactive layer management
     return m
