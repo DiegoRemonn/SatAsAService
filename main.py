@@ -2,7 +2,8 @@ from auth import authenticate_earth_engine
 from processing import process_image_collection
 from visualization import create_map, save_map, open_map
 from point_extraction import extract_point_values, extract_region_values
-from config import ZARAGOZA_COORDS, AOI, VIS_PARAMS, LOCATIONS
+from config import ZARAGOZA_COORDS, AOI, VIS_PARAMS, LOCATIONS, INDICES
+from time_series_extraction import get_weekly_image_collection, extract_time_series, save_to_csv
 import ee
 
 def main():
@@ -16,6 +17,13 @@ def main():
 
     # Process Satellite image collection
     collection = process_image_collection(AOI)
+    image_collection = get_weekly_image_collection(AOI)
+
+    # Extract time-series data for selected locations
+    time_series_data = extract_time_series(image_collection, LOCATIONS, INDICES, time_interval=7)
+
+    # Save the extracted data to a CSV file
+    save_to_csv(time_series_data)
 
     # Create the map
     m = create_map(ZARAGOZA_COORDS, collection, VIS_PARAMS)

@@ -138,7 +138,7 @@ def create_map(center_coords, collection, vis_params):
         marker_style = {'color': 'red'}  # Marker style (red points)
         m.addLayer(feature_collection, marker_style, f"Point ({lat}, {lon})")
 
-    # Añadir rectángulos de 100x100m
+    # Add rectangles of 100x100m
     add_rectangles_to_map(m, LOCATIONS)
 
     m.addLayerControl() # Add Layer control for interactive layer management

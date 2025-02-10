@@ -24,3 +24,6 @@ LOCATIONS = [
    (41.68301523336218, -0.904520776405019),    # Crops in Zaragoza
    (41.65631734842274, -0.8788629375118525),   # Pilar Square
 ]
+
+# List of indices to extract
+INDICES = ["NDVI", "NDMI", "NDWI", "NDSI"]
