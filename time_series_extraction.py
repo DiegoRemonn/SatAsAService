@@ -6,7 +6,7 @@ from processing import calculate_indices, mask_s2_clouds
 from point_extraction import extract_point_values, extract_region_values
 
 # Define the start date (when Sentinel-2 data is available)
-START_DATE = "2015-06-23"
+START_DATE = "2017-03-28"
 END_DATE = datetime.datetime.today().strftime("%Y-%m-%d") # Current date
 TIME_INTERVAL = 7 # Days (weekly data)
 
@@ -91,7 +91,8 @@ def extract_time_series(image_collection, locations, indices, time_interval=TIME
         # Update progress
         processed_intervals += 1
         progress = (processed_intervals / total_intervals) * 100
-        sys.stdout.write(f"\rProcessing time-series: {progress:.2f}% complete")
+        sys.stdout.write(f"\rProcessing time-series: {progress:.2f}% complete | "
+                         f"Number of images for this week: {filtered.size().getInfo()}")
         sys.stdout.flush()
 
         # Move to the next time interval

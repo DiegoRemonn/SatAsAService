@@ -16,7 +16,7 @@ def extract_point_values(image, point, scale=10):
         # Ensure the point is within the image bounds
         region = image.geometry()
         if not region.contains(point, 1).getInfo():
-            #print(f"Point {point.getInfo()} is outside the image bounds.")
+            print(f"Point {point.getInfo()} is outside the image bounds.")
             return None
 
         # Reduce the image at the given point to extract band values
