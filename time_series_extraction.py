@@ -3,6 +3,7 @@ import csv
 import sys
 import datetime
 from processing import calculate_indices, mask_s2_clouds
+from point_extraction import extract_point_values, extract_region_values
 
 # Define the start date (when Sentinel-2 data is available)
 START_DATE = "2015-06-23"
@@ -72,12 +73,8 @@ def extract_time_series(image_collection, locations, indices, time_interval=TIME
         if image:
             for lat, lon in locations:
                 point = ee.Geometry.Point([lon, lat])
-                values = image.reduceRegion(
-                    reducer=ee.Reducer.mean(),
-                    geometry=point,
-                    scale=10, # Sentinel-2 pixel resolution (10m)
-                    maxPixels=1e6
-                ).getInfo()
+                values = extract_point_values(image, point, scale=10)
+                region_values = extract_region_values(image, point, scale=10)
 
                 # Store extracted values if available
                 if values:
@@ -88,6 +85,7 @@ def extract_time_series(image_collection, locations, indices, time_interval=TIME
                     }
                     for index in indices:
                         row[index] = values.get(index, None) # Retrieve values for each index
+                        row[f"{index}_region"] = region_values.get(index, None) if region_values else None # Retrieve 100x100m region values
                     results.append(row)
 
         # Update progress

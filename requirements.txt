@@ -1,3 +1,5 @@
 earthengine-api
 geemap
 setuptools
+plotly
+pandas

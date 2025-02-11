@@ -4,6 +4,7 @@ from visualization import create_map, save_map, open_map
 from point_extraction import extract_point_values, extract_region_values
 from config import ZARAGOZA_COORDS, AOI, VIS_PARAMS, LOCATIONS, INDICES
 from time_series_extraction import get_weekly_image_collection, extract_time_series, save_to_csv
+from plot_time_series import plot_indices_per_point, plot_points_per_index
 import ee
 
 def main():
@@ -20,10 +21,16 @@ def main():
     image_collection = get_weekly_image_collection(AOI)
 
     # Extract time-series data for selected locations
-    time_series_data = extract_time_series(image_collection, LOCATIONS, INDICES, time_interval=7)
+    time_series_data = extract_time_series(image_collection, LOCATIONS, INDICES, time_interval=14)
 
     # Save the extracted data to a CSV file
+    csv_filename = "time_series.csv"
     save_to_csv(time_series_data)
+
+    # Generate visualizations
+    print("\nGenerating time-series plots...")
+    plot_indices_per_point(csv_filename) # View all indices in each point
+    # plot_points_per_index(csv_filename)  # Uncomment to view each index across all points
 
     # Create the map
     m = create_map(ZARAGOZA_COORDS, collection, VIS_PARAMS)
@@ -53,20 +60,6 @@ def main():
             print(f"Averaged values in 100x100m area ({lat}, {lon}): {region_values}")
         else:
             print(f"Failed to extract values at point ({lat}, {lon}).")
-    '''
-    # Ask the user for a point to extract values
-    lat = float(input("Enter latitude for the point: "))
-    lon = float(input("Enter longitude for the point: "))
-    point = ee.Geometry.Point([lon, lat])
-
-    # Extract values at the given point
-    values = extract_point_values(collection, point)
-
-    if values:
-        print(f"Values at point ({lat}, {lon}): {values})")
-    else:
-        print("Failed to extract values at the specified point.")
-    '''
 
 if __name__ == '__main__':
     main()
