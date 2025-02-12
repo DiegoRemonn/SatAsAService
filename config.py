@@ -1,5 +1,6 @@
 import ee
 from auth import authenticate_earth_engine
+import datetime
 
 # Authenticate Google Earth Engine (in case it is not authenticated previously)
 authenticate_earth_engine()
@@ -27,3 +28,12 @@ LOCATIONS = [
 
 # List of indices to extract
 INDICES = ["NDVI", "NDMI", "NDWI", "NDSI"]
+ERA5_BANDS = ["volumetric_soil_water_layer_1", "volumetric_soil_water_layer_2",
+              "volumetric_soil_water_layer_3", "volumetric_soil_water_layer_4"]
+
+# Define start dates for each dataset
+SENTINEL_START_DATE = "2017-03-28"  # Sentinel-2 starts in 2017
+ERA5_START_DATE = "2000-01-01"  # ECMWF ERA5-Land starts in 1950 1950-01-01"
+
+# Define end date (current date)
+END_DATE = datetime.datetime.today().strftime("%Y-%m-%d")

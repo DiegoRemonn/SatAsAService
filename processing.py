@@ -1,4 +1,5 @@
 import ee
+from config import END_DATE, ERA5_BANDS
 
 def mask_s2_clouds(image):
     """
@@ -63,3 +64,23 @@ def process_image_collection(aoi):
         .map(mask_s2_clouds) \
         .map(calculate_indices)
     return collection.median()
+
+def get_era5_collection(aoi, start_date, end_date=END_DATE):
+    """
+    Retrieves ECMWF ERA5-Land soil moisture data for the specified AOI and time range.
+
+    :param aoi: ee.Geometry
+        The area of interest for soil moisture extraction.
+    :param start_date: str
+        Start date in "YYYY-MM-DD" format.
+    :param end_date: str
+        End date in "YYYY-MM-DD" format.
+    :return: ee.ImageCollection
+        ERA5-Land soil moisture dataset filtered by date and location.
+    """
+    collection = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY") \
+        .filter(ee.Filter.date(start_date, end_date)) \
+        .filter(ee.Filter.bounds(aoi)) \
+        .select(ERA5_BANDS)
+
+    return collection # Get median value over the period
