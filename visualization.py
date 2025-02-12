@@ -1,4 +1,4 @@
-from config import LOCATIONS
+from config import LOCATIONS, ERA5_BANDS
 import geemap as ui
 import webbrowser
 import os
@@ -19,20 +19,25 @@ def add_rectangles_to_map(m, locations):
         ])
         m.addLayer(region, {'color': 'blue'}, f"100x100m Area ({lat}, {lon})")
 
-def create_map(center_coords, collection, vis_params):
+def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
     """
-    Creates a map centered on the given coordinates and adds a layer with the processed image collection.
+    Creates a map centered on the given coordinates and adds layers for Sentinel-2 and ERA5.
+
     :param center_coords: list
         Coordinates [latitude, longitude] for the map center.
-    :param collection: ee.Image
+    :param sentinel_collection: ee.Image
         Processed Sentinel-2 image collection.
+    :param era5_collection: ee.Image
+        Processed ERA5-Land image collection.
     :param vis_params: dict
-        Visualization parameters for the layer.
+        Visualization parameters for Sentinel-2.
     :return: geemap.Map
-        Object with the added Sentinel-2 layer and location markers.
+        Object with the added Sentinel-2 and ERA5 layers.
     """
     m = ui.Map(center=center_coords, zoom=10, height="98vh") # Create a map object.
-    m.add_ee_layer(collection, vis_params, 'Sentinel-2 True Color') # Add the cloud-masked image to the map
+
+    # Add Sentinel-2 layers
+    m.add_ee_layer(sentinel_collection, vis_params, 'Sentinel-2 True Color') # Add the cloud-masked image to the map
 
     # False color Visualization
     falsecolor = {
@@ -40,7 +45,7 @@ def create_map(center_coords, collection, vis_params):
         'max': 5000,
         'bands': ['B8', 'B4', 'B3']
     }
-    m.add_ee_layer(collection, falsecolor, 'Sentinel-2 False Color')
+    m.add_ee_layer(sentinel_collection, falsecolor, 'Sentinel-2 False Color')
 
     # NDVI Visualization (Sentinel Hub Exact Palette with Defined Ranges)
     ndvi_ramp = [
@@ -62,7 +67,7 @@ def create_map(center_coords, collection, vis_params):
         'palette': ndvi_palette
     }
 
-    m.add_ee_layer(collection.select('NDVI'), ndvi_vis_params, 'Sentinel-2 NDVI')
+    m.add_ee_layer(sentinel_collection.select('NDVI'), ndvi_vis_params, 'Sentinel-2 NDVI')
 
     # NDMI Visualization (Sentinel Hub Exact Palette with Defined Ranges)
     ndmi_ramp = [
@@ -84,7 +89,7 @@ def create_map(center_coords, collection, vis_params):
     }
 
     # Apply the NDMI visualization layer
-    m.add_ee_layer(collection.select('NDMI'), ndmi_vis_params, 'Sentinel-2 NDMI')
+    m.add_ee_layer(sentinel_collection.select('NDMI'), ndmi_vis_params, 'Sentinel-2 NDMI')
 
     # SWIR Visualization
     swir_vis_params = {
@@ -92,7 +97,7 @@ def create_map(center_coords, collection, vis_params):
         'max': 5000,
         'bands': ['B12', 'B8A', 'B4']
     }
-    m.add_ee_layer(collection, swir_vis_params, 'Sentinel-2 SWIR')
+    m.add_ee_layer(sentinel_collection, swir_vis_params, 'Sentinel-2 SWIR')
 
     # NDWI Visualization
     ndwi_vis_params = {
@@ -100,10 +105,10 @@ def create_map(center_coords, collection, vis_params):
         'max': 1.0,
         'palette': ['#008000', '#FFFFFF', '#0000CC']
     }
-    m.add_ee_layer(collection.select('NDWI'), ndwi_vis_params, 'Sentinel-2 NDWI')
+    m.add_ee_layer(sentinel_collection.select('NDWI'), ndwi_vis_params, 'Sentinel-2 NDWI')
 
     # NDSI Visualization
-    ndsi = collection.select('NDSI')
+    ndsi = sentinel_collection.select('NDSI')
 
     # Crear máscara para que solo se muestre nieve y el resto sea transparente
     snow_mask = ndsi.gte(0.4)  # Se considera nieve cuando NDSI > 0.4
@@ -126,7 +131,18 @@ def create_map(center_coords, collection, vis_params):
         'palette': ['#000000', '#ff0000', '#2f2f2f', '#643200', '#00a000', '#ffe65a', '#0000ff',
                     '#808080', '#c0c0c0', '#ffffff', '#64c8ff', '#ff96ff']
     }
-    m.add_ee_layer(collection.select('SCL'), scl_vis_params, 'Sentinel-2 Scene Classification')
+    m.add_ee_layer(sentinel_collection.select('SCL'), scl_vis_params, 'Sentinel-2 Scene Classification')
+
+    # ERA5-Land Soil Moisture Visualization
+    soil_moisture_palette = ['#ffffcc', '#c2e699', '#78c679', '#31a354', '#006837']  # Dry to wet color scale
+
+    for i, band in enumerate(ERA5_BANDS):
+        era5_vis_params = {
+            'min': 0.0,
+            'max': 1.0,
+            'palette': soil_moisture_palette
+        }
+        m.add_ee_layer(era5_collection.select(band), era5_vis_params, f"ERA5-Land {band}")
 
     # Add location markers
     for lat, lon in LOCATIONS:
