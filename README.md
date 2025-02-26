@@ -100,10 +100,10 @@ Los gráficos generados por **Plotly** permiten:
 
 ### **Humedad del Suelo (ERA5-Land)**
 **Capas de humedad del suelo**:
-- **0-7 cm** *(capa superficial)*
-- **7-28 cm**
-- **28-100 cm**
-- **100-289 cm** *(capa profunda)*
+- **0-7 cm** *(capa superficial).*
+- **7-28 cm.**
+- **28-100 cm.**
+- **100-289 cm** *(capa profunda).*
 
 > ### 📝 NOTA:
 > Este proyecto usa Google Earth Engine y requiere una cuenta autorizada para acceder a los datos.
