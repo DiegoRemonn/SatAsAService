@@ -1,7 +1,6 @@
 # SatAsAService - Análisis de Datos Satelitales con Google Earth Engine
 
-> [!IMPORTANT]
-> Este proyecto combina imágenes de **Sentinel-2** y datos climáticos de **ECMWF ERA5-Land** para la extracción de índices de vegetación y humedad del suelo. Se implementa en **Google Earth Engine (GEE)** y permite la visualización y análisis de datos geoespaciales en áreas específicas._
+Este proyecto combina imágenes de **Sentinel-2** y datos climáticos de **ECMWF ERA5-Land** para la extracción de índices de vegetación y humedad del suelo. Se implementa en **Google Earth Engine (GEE)** y permite la visualización y análisis de datos geoespaciales en áreas específicas._
 
 ## **Descripción del Proyecto**
 El sistema permite:
@@ -105,8 +104,6 @@ Los gráficos generados por **Plotly** permiten:
 - **28-100 cm**
 - **100-289 cm** *(capa profunda)*
 
-> [!NOTE]
-> Este proyecto usa Google Earth Engine y requiere una cuenta autorizada para acceder a los datos.
-
-> [!WARNING]
-> Los datos de Sentinel-2 están disponibles desde 2017, mientras que ERA5-Land tiene datos desde 1950.
+### NOTA:
+Este proyecto usa Google Earth Engine y requiere una cuenta autorizada para acceder a los datos.
+Los datos de Sentinel-2 están disponibles desde 2017, mientras que ERA5-Land tiene datos desde 1950.
