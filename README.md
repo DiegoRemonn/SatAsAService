@@ -70,8 +70,8 @@ Los gráficos generados por **Plotly** permiten:
 - **28-100 cm**
 - **100-289 cm** *(capa profunda)*
 
-[!NOTE]
-Este proyecto usa Google Earth Engine y requiere una cuenta autorizada para acceder a los datos.
+> [!NOTE]
+> Este proyecto usa Google Earth Engine y requiere una cuenta autorizada para acceder a los datos.
 
-[!WARNING]
-Los datos de Sentinel-2 están disponibles desde 2017, mientras que ERA5-Land tiene datos desde 1950.
+> [!WARNING]
+> Los datos de Sentinel-2 están disponibles desde 2017, mientras que ERA5-Land tiene datos desde 1950.
