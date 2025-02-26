@@ -49,6 +49,41 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Procedimiento del análisis satelital
+
+El proceso de análisis satelital en este proyecto sigue los siguientes pasos:
+
+1. **Descarga de datos satelitales**  
+   - Se obtienen imágenes ópticas de **Sentinel-2** y datos climáticos de **ERA5-Land** desde **Google Earth Engine (GEE)**.  
+   - Se aplican filtros de fecha y región de interés.
+
+2. **Aplicación de máscaras de nubes**  
+   - Se usa la **banda QA60** de Sentinel-2 para eliminar píxeles afectados por nubes y cirros.
+
+3. **Cálculo de índices espectrales (Sentinel-2)**  
+   Se calculan varios índices para analizar la vegetación y la humedad:
+   - **NDVI** (Índice de Vegetación), **NDMI** (Índice de Humedad de la Vegetación), **NDWI** (Índice de Agua), **NDSI** (Índice de Nieve).
+
+4. **Extracción de humedad del suelo (ERA5-Land)**  
+   Se obtienen datos de humedad en diferentes profundidades:
+   - **0-7 cm (superficial)**, **7-28 cm**, **28-100 cm**, **100-289 cm (capa profunda)**.
+
+5. **Extracción de datos en puntos de interés**  
+   - Se obtiene la información en ubicaciones específicas de **Zaragoza**.  
+   - Se extraen valores en un punto exacto y en una ventana de **100x100 m** alrededor.  
+
+6. **Generación de series temporales**  
+   - Se extraen datos semanales (14 días/2 semanas) y se guardan en archivos CSV.  
+   - Se registra la evolución de los índices en el tiempo para cada punto.
+
+7. **Creación de mapas interactivos**  
+   - Se generan mapas en **HTML** con geemap.  
+   - Se superponen capas de **Sentinel-2** y **ERA5-Land** para la exploración visual.
+
+8. **Visualización y análisis de resultados**  
+   - Se crean gráficos dinámicos con **Plotly**.  
+   - Se comparan índices de vegetación y humedad en distintos puntos.
+
 ## 📊 **Visualización de Series Temporales**
 Los gráficos generados por **Plotly** permiten:
 
