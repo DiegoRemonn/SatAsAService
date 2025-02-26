@@ -1,4 +1,5 @@
 import ee
+from config import USER_PROJECT
 
 def authenticate_earth_engine():
     """
@@ -7,8 +8,8 @@ def authenticate_earth_engine():
     """
     try:
         ee.Authenticate()
-        ee.Initialize(project="ee-dremon")
+        ee.Initialize(project=USER_PROJECT)
     except Exception as e:
         print("Authenticating Google Earth Engine...")
         ee.Authenticate()
-        ee.Initialize(project="ee-dremon")
+        ee.Initialize(project=USER_PROJECT)
