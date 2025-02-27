@@ -44,6 +44,9 @@ pip install -r requirements.txt
 
 ## Uso del Proyecto
 
+### Configuración del Proyecto
+El primer paso, antes de ejecutar el script principal, será acceder a auth.py y modificar el valor de la variable "USER_PROJECT" introduciendo el nombre del proyecto habilitado por Google Earth Engine.
+
 ### Ejecutar el Script Principal
 ```bash
 python main.py
