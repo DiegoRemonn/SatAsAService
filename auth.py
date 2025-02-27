@@ -1,5 +1,7 @@
 import ee
-from config import USER_PROJECT
+
+# Name of the Google Earth Engine Project name (Put your own project name)
+USER_PROJECT = ""
 
 def authenticate_earth_engine():
     """

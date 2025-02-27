@@ -2,9 +2,6 @@ import ee
 from auth import authenticate_earth_engine
 import datetime
 
-# Name of the Google Earth Engine Project name (Put your own project name)
-USER_PROJECT = ""
-
 # Authenticate Google Earth Engine (in case it is not authenticated previously)
 authenticate_earth_engine()
 
