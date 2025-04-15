@@ -3,3 +3,7 @@ geemap
 setuptools
 plotly
 pandas
+imageio
+requests
+pillow
+numpy

@@ -36,6 +36,79 @@ def get_weekly_image_collection(aoi, start_date, end_date=END_DATE):
 
     return collection.select(selected_bands)  # Ensure all images have only these bands
 
+def calculate_ndmi(image):
+    """
+    Calculates NDMI for a given image.
+    :param image: ee.Image
+        Sentinel-2 image to calculate indices from.
+    :return: ee.Image
+        Map with an additional index bands.
+    """
+    # NDMI (Normalized Difference Moisture Index)
+    ndmi = image.normalizedDifference(['B8', 'B11']).rename('NDMI')
+
+    return image.addBands([ndmi]) # Add indices as a new bands to the image
+
+def get_monthly_composites(aoi, start_year, end_year, index=None):
+    """
+    Genera una lista de imágenes compuestas para cada mes desde start_year hasta end_year.
+    Cada imagen se obtiene filtrando la colección Sentinel-2, aplicando la máscara de nubes,
+    calculando los índices y tomando la mediana de los valores.
+    """
+    composites = []
+    composites_era = []
+    dates = []
+    current = datetime.datetime(start_year, 1, 1)
+    end_date = datetime.datetime(end_year, 12, 31)
+
+    while current <= end_date:
+        start_str = current.strftime('%Y-%m-%d')
+        # Definir el final del mes (para evitar cálculos complejos, se utiliza la aproximación de
+        # avanzar al mes siguiente y luego restar 1 segundo, o simplemente usar filterDate)
+        if current.month == 12:
+            next_month = datetime.datetime(current.year + 1, 1, 1)
+        else:
+            next_month = datetime.datetime(current.year, current.month + 1, 1)
+        end_str = next_month.strftime('%Y-%m-%d')
+
+        # Filtrar la colección para el periodo del mes y el AOI de la Laguna de Gallocanta
+        collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
+            .filterDate(start_str, end_str) \
+            .filterBounds(aoi) \
+            .map(calculate_ndmi)
+            #.map(mask_s2_clouds) \
+            #.map(calculate_indices)
+
+        collection_era = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY") \
+            .filter(ee.Filter.date(start_str, end_str)) \
+            .filter(ee.Filter.bounds(aoi)) \
+            .select("volumetric_soil_water_layer_4")
+
+        # Verificar el tamaño de las colecciones
+        size_s2 = collection.size().getInfo()
+        size_era = collection_era.size().getInfo()
+        print(f"\r{start_str} - Sentinel-2: {size_s2} imágenes, ERA5: {size_era} imágenes.", end="", flush=True)
+
+        if index:
+            # Crear una imagen compuesta (por ejemplo, la mediana de las imágenes del mes)
+            composite = collection.median().select(index)
+            composite_era = collection_era.median()
+            # Puedes añadir metadatos o etiquetar la imagen con la fecha si lo deseas
+            composites.append(composite)
+            composites_era.append(composite_era)
+        else:
+            composite = collection.median()
+            composite_era = collection_era.median()
+            composites.append(composite)
+            composites_era.append(composite_era)
+
+        dates.append(start_str)
+        # Pasar al siguiente mes
+        current = next_month
+
+    print("\n")
+    return composites, composites_era, dates
+
 def extract_time_series(image_collection, locations, bands, scale, start_date, dataset_name, time_interval=TIME_INTERVAL):
     """
     Extracts time-series data from Sentinel-2 or ERA5-Land for the selected locations.

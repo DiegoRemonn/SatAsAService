@@ -11,6 +11,9 @@ ZARAGOZA_COORDS = [41.6488, -0.8891]
 # Area of interest (AOI) in Zaragoza
 AOI = ee.Geometry.Rectangle([-0.9500, 41.5800, -0.8300, 41.7200])
 
+# Area of interest (AOI) in Gallocanta
+GALLOCANTA_AOI = ee.Geometry.Rectangle([-2.156, 40.474, -0.846, 41.464])
+
 # Visualization parameters
 VIS_PARAMS = {
    'bands': ['B4', 'B3', 'B2'],  # RGB bands
@@ -33,7 +36,7 @@ ERA5_BANDS = ["volumetric_soil_water_layer_1", "volumetric_soil_water_layer_2",
 
 # Define start dates for each dataset
 SENTINEL_START_DATE = "2017-03-28"  # Sentinel-2 starts in 2017
-ERA5_START_DATE = "1950-01-01" # ECMWF ERA5-Land starts in 1950
+ERA5_START_DATE = "2015-01-01" # ECMWF ERA5-Land starts in 1950
 
 # Define end date (current date)
 END_DATE = datetime.datetime.today().strftime("%Y-%m-%d")
