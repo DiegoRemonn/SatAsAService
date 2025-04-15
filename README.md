@@ -3,6 +3,20 @@
 > #### ⚠️ IMPORTANTE:
 > Este proyecto combina imágenes de **Sentinel-2** y datos climáticos de **ECMWF ERA5-Land** para la extracción de índices de vegetación y humedad del suelo. Se implementa en **Google Earth Engine (GEE)** y permite la visualización y análisis de datos geoespaciales en áreas específicas.
 
+## Table of Contents
+1. [Descripción del Proyecto](#descripción-del-proyecto)
+2. [Estructura del Proyecto](#estructura-del-proyecto)
+3. [Instalación y Configuración](#instalación-y-configuración)
+4. [Uso del Proyecto](#uso-del-proyecto)
+    - [Configuración](#configuración-del-proyecto)
+    - [Ejecución del Script Principal](#ejecutar-el-script-principal)
+5. [Procedimiento del Análisis Satelital](#procedimiento-del-análisis-satelital)
+6. [Visualización de Series Temporales](#visualización-de-series-temporales)
+    - [Índices de Vegetación (Sentinel-2)](#índices-de-vegetación-sentinel-2)
+    - [Humedad del Suelo (ERA5-Land)](#humedad-del-suelo-era5-land)
+7. [Funcionalidades Adicionales](#funcionalidades-adicionales)
+8. [Ejemplos de Resultados](#ejemplos-de-resultados)
+
 ## **Descripción del Proyecto**
 El sistema permite:
 - 📡 **Procesar imágenes satelitales de Sentinel-2** y aplicar máscaras de nubes.
@@ -135,7 +149,7 @@ Los gráficos generados por **Plotly** permiten:
 - **28-100 cm.**
 - **100-289 cm** *(capa profunda).*
 
-### **Funcionalidades Adicionales**
+## Funcionalidades Adicionales
 - Menú interactivo:
 El script `main.py` presenta un menú interactivo que permite a los usuarios ejecutar cada paso del proceso de forma independiente o ejecutar el proceso completo.
 - Manejo de errores y reconexión:
