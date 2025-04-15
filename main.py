@@ -102,7 +102,7 @@ def create_interactive_map(collection, era5_coll):
         point = ee.Geometry.Point([lon, lat])
         values = extract_point_values(collection, point)  # Extract values at the given point
 
-        # Extraer valores de una región de 100x100m
+        # Extract values from a determined region
         region_values = extract_region_values(collection, point)
 
         if values:

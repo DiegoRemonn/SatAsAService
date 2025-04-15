@@ -6,11 +6,24 @@ import numpy as np
 import time
 
 from auth import reconnect_gee
+from config import GALLOCANTA_LOCATION
 
 def create_colorbar(width, height, ramp, font=None):
     """
-    Genera una imagen (PIL) con un gradiente vertical basado en 'ramp',
-    lista de tuplas (valor_float, color_hex). Etiqueta los valores a la derecha.
+    Generates a PIL image containing a vertical gradient based on the provided ramp.
+
+    The ramp is a list of tuples (value, color_hex) that defines breakpoints for the gradient.
+    The generated image also includes labels drawn to the right side.
+
+    Args:
+        width (int): The width (in pixels) for the gradient area.
+        height (int): The height (in pixels) for the gradient.
+        ramp (list of tuples): List of (value, color_hex) breakpoints, e.g., [(-0.8, '#800000'), ...].
+        font (PIL.ImageFont, optional): Font used to draw the labels. If None, a default bold font (arialbd.ttf)
+                                        is attempted with size 4.
+
+    Returns:
+        PIL.Image: An RGBA image of the colorbar with labels.
     """
     colorbar = Image.new('RGBA', (width * 3 + 8, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(colorbar)
@@ -20,19 +33,30 @@ def create_colorbar(width, height, ramp, font=None):
     val_range = max_val - min_val
 
     def interpolate_color(c1, c2, t):
+        """
+        Linearly interpolates between two colors.
+
+        Args:
+            c1 (tuple): First color as (R, G, B).
+            c2 (tuple): Second color as (R, G, B).
+            t (float): Interpolation parameter between 0 and 1.
+
+        Returns:
+            tuple: Interpolated color as (R, G, B).
+        """
         return (
             int(c1[0] + (c2[0] - c1[0]) * t),
             int(c1[1] + (c2[1] - c1[1]) * t),
             int(c1[2] + (c2[2] - c1[2]) * t)
         )
 
-    # Convertir hex a RGB y guardarlo en ramp_rgb
+    # Convert hex colors to RGB and store in ramp_rgb.
     ramp_rgb = []
     for val, hexcolor in ramp:
         rgb = tuple(int(hexcolor[i:i+2], 16) for i in (1, 3, 5))
         ramp_rgb.append((rgb, val))
 
-    # Crear el gradiente en vertical
+    # Create the vertical gradient.
     for row in range(height):
         frac = row / float(height - 1)
         current_val = min_val + frac * val_range
@@ -48,61 +72,61 @@ def create_colorbar(width, height, ramp, font=None):
                 color_row = interpolate_color(c1, c2, local_frac)
                 break
         else:
-            # Si está fuera del rango, ajustamos al extremo
+            # If out of range, use the extreme color.
             if current_val < ramp_rgb[0][1]:
                 color_row = ramp_rgb[0][0]
             elif current_val > ramp_rgb[-1][1]:
                 color_row = ramp_rgb[-1][0]
 
+        # Fill the current row of the gradient.
         for col in range(width):
             colorbar.putpixel((col, height - 1 - row), color_row)
 
+    # Set up the font if not provided.
     if not font:
         try:
-            font = ImageFont.truetype("arialbd.ttf", 4)  # Fuente de la leyenda
+            font = ImageFont.truetype("arialbd.ttf", 4)
         except IOError:
             font = ImageFont.load_default()
 
-    # Dibujar etiquetas a la derecha de la barra
+    # Draw labels to the right of the gradient.
     text_x = width + 5
     for val, hexcolor in ramp:
         frac_label = (val - min_val) / val_range
         label_row = height - int(frac_label * (height - 1))
         label_str = f"{val:g}"
 
-        # Definir offset vertical dinámico
+        # Apply a dynamic vertical offset based on the value.
         if -0.5 < val < 0 or val > 0.5:
-            # Desplaza más abajo
-            y_offset = 1
+            y_offset = 1   # Move down
         elif 0.5 > val > 0:
-            # Desplaza más arriba
-            y_offset = -10
+            y_offset = -10 # Move up
         elif val < -0.5:
-            y_offset = -15
+            y_offset = -15 # Move up
         else:
-            # Para cero, centrado
-            y_offset = 0
+            y_offset = 0   # For zero, centered
 
-        # Ahora dibujamos el texto aplicando el offset
+        # Draw the text applying the offset
         draw.text((text_x, label_row + y_offset), label_str, fill="black", font=font)
 
     return colorbar
 
 def draw_marker(draw, point, aoi_info, image_size, marker_color="red", marker_radius=5, text="Localidad"):
     """
-    Dibuja un marcador (círculo) en la imagen usando las coordenadas de la localización.
+    Draws a marker (a circle) on an image at a given geographic location and places a label above it.
 
-    :param draw: Objeto ImageDraw de Pillow.
-    :param point: Tupla (lon, lat) de la localización.
-    :param aoi_info: Información del AOI obtenida con getInfo() (diccionario).
-    :param image_size: Tupla (ancho, alto) de la imagen en píxeles.
-    :param marker_color: Color del marcador.
-    :param marker_radius: Radio del marcador en píxeles.
-    :param text: Texto a dibujar sobre el marcador.
+    This function converts geographic coordinates into pixel coordinates using the AOI's boundary.
+
+    Args:
+        draw (PIL.ImageDraw): Drawing context.
+        point (tuple): (longitude, latitude) for the marker.
+        aoi_info (dict): AOI information from ee.Geometry.getInfo().
+        image_size (tuple): (width, height) of the image in pixels.
+        marker_color (str): Color of the marker.
+        marker_radius (int): Radius (in pixels) of the marker circle.
+        text (str): Text label to display above the marker.
     """
-    # Suponiendo que aoi_info es un polígono, extraemos sus coordenadas.
-    # En EE, para un rectángulo generalmente la estructura es:
-    # {"type": "Polygon", "coordinates": [[ [xmin, ymin], [xmin, ymax], [xmax, ymax], [xmax, ymin], [xmin, ymin] ]]}
+    # Extract polygon coordinates from the AOI info.
     coords = aoi_info["coordinates"][0]
     lons = [c[0] for c in coords]
     lats = [c[1] for c in coords]
@@ -111,109 +135,111 @@ def draw_marker(draw, point, aoi_info, image_size, marker_color="red", marker_ra
 
     width_px, height_px = image_size
     lon, lat = point
-    # Convertir a coordenadas de pixel:
+    # Convert geographic coordinate to pixel coordinate.
     x_pixel = (lon - xmin) / (xmax - xmin) * width_px
     y_pixel = (ymax - lat) / (ymax - ymin) * height_px
 
-    # Dibujar un círculo (elipse) centrado en (x_pixel, y_pixel)
+    # Draw the circular marker.
     draw.ellipse(
         [(x_pixel - marker_radius, y_pixel - marker_radius),
          (x_pixel + marker_radius, y_pixel + marker_radius)],
         fill=marker_color
     )
 
-    # Cargar una fuente para el texto
+    # Load the font for the marker label.
     try:
-        font = ImageFont.truetype("arialbd.ttf", 12)  # Fuente en negrita de tamaño 12
+        font = ImageFont.truetype("arialbd.ttf", 12)
     except IOError:
         font = ImageFont.load_default()
 
-    # Calcular el tamaño del texto para centrarlo horizontalmente
+    # Calculate text width for horizontal centering.
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
 
-    # Posicionar el texto encima del marcador
-    # Se centra horizontalmente, y verticalmente se coloca unos 5 píxeles arriba del marcador
+    # Determine label position above the marker.
+    # Centered horizontally and, vertically placed 5 pixels above the marker
     x_text = x_pixel - text_width / 2
     y_text = y_pixel - marker_radius - 5 - (bbox[3] - bbox[1])
-
     draw.text((x_text, y_text), text, fill=marker_color, font=font)
 
 def download_thumbnail(url, timeout=60, check_interval=0.5):
     """
-    Intenta descargar la imagen desde 'url', esperando hasta 'timeout' segundos a que esté disponible,
-    comprobando cada 'check_interval' segundos.
+    Attempts to download the image from the specified URL, waiting until the image is available.
 
-    :param url: URL de la imagen.
-    :param timeout: Tiempo máximo en segundos a esperar.
-    :param check_interval: Intervalo en segundos entre comprobaciones.
-    :return: La respuesta si se descarga correctamente o None en caso de timeout.
+    If a 401 error is detected, it attempts to re-authenticate and reconnect to Earth Engine.
+
+    Args:
+        url (str): URL of the image.
+        timeout (float): Maximum time in seconds to wait for a successful download.
+        check_interval (float): Seconds to wait between successive attempts.
+
+    Returns:
+        requests.Response: The HTTP response if the image is successfully downloaded, or None on timeout.
     """
     start_time = time.time()
     reconnect_done = False
     while True:
         try:
             response = requests.get(url)
-            # Si all está OK, devolvemos la respuesta.
             if response.status_code == 200:
                 return response
-            # Si se recibe error 401 y aún no se intentó reconectar
             elif response.status_code == 401 and not reconnect_done:
-                print(f"\nError 401 detectado en {url}. Intentando re-autenticar y reconectar a EE...")
+                print(f"\nError 401 detected at {url}. Attempting to re-authenticate and reconnect to EE...")
                 if reconnect_gee():
                     reconnect_done = True
                 else:
-                    print("No se pudo reconectar a EE.")
-            # Si se recibe otro error, simplemente se imprime (se puede extender la lógica si se requiere).
+                    print("Failed to reconnect to EE.")
             else:
-                print(f"\nError descargando imagen de: {url} (Código {response.status_code})")
+                print(f"\nError downloading image from: {url} (Status code: {response.status_code})")
 
-            # Comprobar timeout
+            # Check the timeout
             if time.time() - start_time > timeout:
-                print(f"\nTimeout alcanzado intentando descargar la imagen de: {url}")
+                print(f"\nTimeout reached while downloading image from: {url}")
                 return None
             time.sleep(check_interval)
         except Exception as e:
-            print(f"\nExcepción al intentar descargar {url}: {e}")
+            print(f"\nException while trying to download {url}: {e}")
             if time.time() - start_time > timeout:
-                print(f"\nTimeout alcanzado (excepción) intentando descargar {url}")
+                print(f"\nTimeout reached (exception) while downloading {url}")
                 return None
             time.sleep(check_interval)
 
 def create_gif_from_urls(urls, dates, legend_palette, aoi, output_filename='laguna_gallocanta_evolucion.gif', duration=1):
     """
-    Descarga imágenes a partir de una lista de URLs y crea un GIF animado.
+    Downloads images from a list of URLs, annotates each image with a date label, pastes a static colorbar legend,
+    draws a geographic marker, and creates an animated GIF.
 
-    :param urls: Lista de URLs de las imágenes.
-    :param dates: Lista de fechas (string) correspondientes a cada imagen.
-    :param legend_palette: Identificador de la capa del satélite utilizado.
-    :param aoi: Area of interest selected
-    :param output_filename: Nombre del GIF de salida.
-    :param duration: Tiempo (en segundos) que se muestra cada frame.
+    Args:
+        urls (list of str): List of image URLs.
+        dates (list of str): List of corresponding date strings for each image.
+        legend_palette (str): Identifier for the satellite layer used ('ndmi' or other).
+        aoi (ee.Geometry): Area of interest; its .getInfo() is used to determine pixel mappings.
+        output_filename (str): Filename for the output GIF.
+        duration (float): Time (in seconds) each frame is displayed in the GIF.
     """
     if legend_palette == "ndmi":
         legend_items = [
-            (-0.8, '#800000'),  # Rojo oscuro (baja humedad)
-            (-0.24, '#ff0000'),  # Rojo brillante (zona seca)
-            (-0.032, '#ffff00'),  # Amarillo (transición a humedad)
-            (0.032, '#00ffff'),  # Cian (humedad moderada)
-            (0.24, '#0000ff'),  # Azul brillante (humedad alta)
-            (0.8, '#000080')  # Azul oscuro (máxima humedad)
+            (-0.8, '#800000'),  # Dark red (low moisture)
+            (-0.24, '#ff0000'),  # Bright red (dry area)
+            (-0.032, '#ffff00'),  # Yellow (transition moisture)
+            (0.032, '#00ffff'),  # Cyan (moderate moisture)
+            (0.24, '#0000ff'),  # Bright blue (high moisture)
+            (0.8, '#000080')  # Dark blue (maximum moisture)
         ]
     else:
         legend_items = [
-            (0.0, '#ffffcc'),  # Rojo oscuro (baja humedad)
-            (0.2, '#c2e699'),  # Rojo brillante (zona seca)
-            (0.4, '#78c679'),  # Amarillo (transición a humedad)
-            (0.6, '#31a354'),  # Cian (humedad moderada)
-            (0.8, '#006837'),  # Azul brillante (humedad alta)
-        ]
+            (0.0, '#ffffcc'),
+            (0.2, '#c2e699'),
+            (0.4, '#78c679'),
+            (0.6, '#31a354'),
+            (0.8, '#006837'),
+        ] # Green colors for ERA5 satellite frames
 
     images = []
     counter = 0
     total = len(urls)
 
-    # Generar la barra de color continua (por ejemplo 20px ancho x 200px alto).
+    # Generate the continuous colorbar legend once.
     colorbar_width = 20
     colorbar_height = 100
 
@@ -224,13 +250,13 @@ def create_gif_from_urls(urls, dates, legend_palette, aoi, output_filename='lagu
 
     legend_img = create_colorbar(colorbar_width, colorbar_height, legend_items, font=font_bar)
 
-    marker_point = (-1.501846, 40.971332)
+    marker_point = GALLOCANTA_LOCATION
     aoi_info = aoi.getInfo()
 
     for url, date_text in zip(urls, dates):
         response = download_thumbnail(url, timeout=20)
         if response is not None:
-            # Leer la imagen desde los datos binarios
+            # Read image from binary data.
             img_array = imageio.v2.imread(BytesIO(response.content))
             pil_img = Image.fromarray(img_array)
             draw = ImageDraw.Draw(pil_img)
@@ -240,66 +266,60 @@ def create_gif_from_urls(urls, dates, legend_palette, aoi, output_filename='lagu
             except IOError:
                 font = ImageFont.load_default()
 
-            # Calcular el tamaño del texto y su posición en la esquina inferior derecha.
+            # Calculate text size and position in the bottom-right corner.
             text = date_text
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
             width, height = pil_img.size
-            x_date = width - text_width - 5  # 5 píxeles del borde derecho
-            y_date = height - text_height - 5  # 5 píxeles del borde inferior
-
+            x_date = width - text_width - 5  # 5 pixels from right border
+            y_date = height - text_height - 5  # 5 pixels from bottom border
             draw.text((x_date, y_date), text, fill="black", font=font)
 
-            pil_draw_resized = ImageDraw.Draw(pil_img)
-            w2, h2 = pil_img.size
-
-            # Pegar la leyenda (colorbar) en la esquina superior derecha.
-            # Asegúrate de que la barra no sea más grande que la imagen final.
-            # Su ancho + 5 píxeles de margen => x_bar.
-            x_bar = w2 - legend_img.width - 5
+            # Paste the colorbar legend in the top-right corner.
+            # Make sure the bar is not bigger than the frame
+            x_bar = width - legend_img.width - 5
             y_bar = 5
+            pil_img.paste(legend_img, (x_bar, y_bar), legend_img)
 
-            # Pegar la barra.
-            pil_img.paste(legend_img, (x_bar, y_bar), legend_img)  # 3er param => usar alpha
-
-            # Dibujar el marcador en la localización especificada
+            # Draw the geographic marker with label.
             draw_marker(draw, marker_point, aoi_info, pil_img.size, marker_color="black", marker_radius=3, text="Laguna de Gallocanta")
 
-            # Convertir la imagen anotada de vuelta a un array de NumPy.
+            # Convert annotated image to NumPy array and append to frames list.
             annotated_array = np.array(pil_img)
             images.append(annotated_array)
         else:
-            print(f"Fallo definitivo descargando imagen de: {url}")
+            print(f"Final error downloading the frame from: {url}")
         counter += 1
 
+        # Update progress on the same line.
         progress = counter / total
         bar_length = 50 # Total length of the bar
         filled_length = int(bar_length * progress)
         bar = "█" * filled_length + "-" * (bar_length - filled_length)
-        print(f"\rProgreso: [{bar}] {progress*100:6.2f}%", end="", flush=True)
+        print(f"\rProgress: [{bar}] {progress*100:6.2f}%", end="", flush=True)
 
     print(f"\n")
-    # Crear el GIF
+    # Create the animated GIF.
     imageio.mimsave(output_filename, images, duration=duration)
-    print(f"GIF creado y guardado como {output_filename}")
+    print(f"GIF created and saved as {output_filename}")
 
 def merge_gifs(gif1_path, gif2_path, output_path, duration=0.1):
     """
-    Une dos GIFs consecutivamente en uno solo.
+    Merges two GIFs consecutively into a single animated GIF.
 
-    :param gif1_path: Ruta del primer GIF.
-    :param gif2_path: Ruta del segundo GIF.
-    :param output_path: Ruta de salida para el GIF resultante.
-    :param duration: Duración (en segundos) de cada frame en el GIF final.
+    Args:
+        gif1_path (str): File path to the first GIF.
+        gif2_path (str): File path to the second GIF.
+        output_path (str): File path for the output merged GIF.
+        duration (float): Duration (in seconds) each frame is displayed in the final GIF.
     """
-    # Leer los GIFs y obtener los cuadros
     frames_gif1 = imageio.mimread(gif1_path)
     frames_gif2 = imageio.mimread(gif2_path)
 
-    # Concatenar los frames
+    # Concatenate the frames
     all_frames = frames_gif1 + frames_gif2
 
-    # Guardar el GIF resultante
+    # Save the final GIF
     imageio.mimsave(output_path, all_frames, duration=duration)
-    print(f"GIF unido guardado en {output_path}")
+    print(f"Merged GIF saved at {output_path}")

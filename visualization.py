@@ -6,12 +6,14 @@ import ee
 
 def add_rectangles_to_map(m, locations):
     """
-    Adds 100x100 meter rectangles around selected points.
+    Adds 100x100 meter rectangles around each specified location on the map.
 
-    :param m: geemap.Map
-        The map object where the rectangles will be added.
-    :param locations: list of tuples
-        A list containing (latitude, longitude) of the points.
+    Args:
+        m (geemap.Map): The map object where the rectangles will be added.
+        locations (list of tuple): A list of geographic points (latitude, longitude) for which to draw rectangles.
+
+    Returns:
+        None
     """
     for lat, lon in locations:
         region = ee.Geometry.Rectangle([
@@ -21,25 +23,28 @@ def add_rectangles_to_map(m, locations):
 
 def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
     """
-    Creates a map centered on the given coordinates and adds layers for Sentinel-2 and ERA5.
+    Creates an interactive map centered on the given coordinates and adds multiple layers for Sentinel-2 and ERA5 data.
 
-    :param center_coords: list
-        Coordinates [latitude, longitude] for the map center.
-    :param sentinel_collection: ee.Image
-        Processed Sentinel-2 image collection.
-    :param era5_collection: ee.Image
-        Processed ERA5-Land image collection.
-    :param vis_params: dict
-        Visualization parameters for Sentinel-2.
-    :return: geemap.Map
-        Object with the added Sentinel-2 and ERA5 layers.
+    This function adds various layers (True Color, False Color, NDVI, NDMI, SWIR, NDWI, NDSI, Scene Classification)
+    from Sentinel-2 imagery and ERA5-Land soil moisture bands to the map. It also adds markers and rectangles
+    corresponding to selected locations.
+
+    Args:
+        center_coords (list): A list containing the map's center coordinates [latitude, longitude].
+        sentinel_collection (ee.Image): Cloud-masked Sentinel-2 composite image.
+        era5_collection (ee.Image): Processed ERA5-Land composite image.
+        vis_params (dict): Visualization parameters for the Sentinel-2 True Color layer.
+
+    Returns:
+        geemap.Map: A map object with all added layers and controls.
     """
+    # Create a map object centered at center_coords, with a zoom level of 10 and nearly full height.
     m = ui.Map(center=center_coords, zoom=10, height="98vh") # Create a map object.
 
-    # Add Sentinel-2 layers
+    # Add Sentinel-2 True Color layer.
     m.add_ee_layer(sentinel_collection, vis_params, 'Sentinel-2 True Color') # Add the cloud-masked image to the map
 
-    # False color Visualization
+    # Add Sentinel-2 False Color visualization.
     falsecolor = {
         'min': 0,
         'max': 5000,
@@ -47,7 +52,7 @@ def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
     }
     m.add_ee_layer(sentinel_collection, falsecolor, 'Sentinel-2 False Color')
 
-    # NDVI Visualization (Sentinel Hub Exact Palette with Defined Ranges)
+    # NDVI Visualization using a custom exact palette.
     ndvi_ramp = [
         [-0.5, '#0c0c0c'], [-0.2, '#bfbfbf'], [-0.1, '#dbdbdb'],
         [0.0, '#eaeaea'], [0.025, '#fff9cc'], [0.05, '#ede8b5'],
@@ -57,38 +62,29 @@ def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
         [0.4, '#4f892d'], [0.45, '#3f7c23'], [0.5, '#306d1c'],
         [0.55, '#216011'], [0.6, '#0f540a'], [1.0, '#004400']
     ]
-
-    # Convert the ramp into separate min/max and palette lists
     ndvi_breaks, ndvi_palette = zip(*ndvi_ramp)
-
     ndvi_vis_params = {
         'min': -0.5,
         'max': 0.6,
         'palette': ndvi_palette
     }
-
     m.add_ee_layer(sentinel_collection.select('NDVI'), ndvi_vis_params, 'Sentinel-2 NDVI')
 
-    # NDMI Visualization (Sentinel Hub Exact Palette with Defined Ranges)
+    # NDMI Visualization using a custom exact palette.
     ndmi_ramp = [
-        [-0.8, '#800000'],  # Rojo oscuro (baja humedad)
-        [-0.24, '#ff0000'],  # Rojo brillante (zona seca)
-        [-0.032, '#ffff00'],  # Amarillo (transición a humedad)
-        [0.032, '#00ffff'],  # Cian (humedad moderada)
-        [0.24, '#0000ff'],  # Azul brillante (humedad alta)
-        [0.8, '#000080']  # Azul oscuro (máxima humedad)
+        [-0.8, '#800000'],  # Dark red (low moisture)
+        [-0.24, '#ff0000'],  # Bright red (dry area)
+        [-0.032, '#ffff00'],  # Yellow (transition moisture)
+        [0.032, '#00ffff'],  # Cyan (moderate moisture)
+        [0.24, '#0000ff'],  # Bright blue (high moisture)
+        [0.8, '#000080']  # Dark blue (maximum moisture)
     ]
-
-    # Convert ramp into separate min/max and palette lists
     ndmi_breaks, ndmi_palette = zip(*ndmi_ramp)
-
     ndmi_vis_params = {
         'min': -0.24,
         'max': 0.24,
         'palette': ndmi_palette
     }
-
-    # Apply the NDMI visualization layer
     m.add_ee_layer(sentinel_collection.select('NDMI'), ndmi_vis_params, 'Sentinel-2 NDMI')
 
     # SWIR Visualization
@@ -107,20 +103,14 @@ def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
     }
     m.add_ee_layer(sentinel_collection.select('NDWI'), ndwi_vis_params, 'Sentinel-2 NDWI')
 
-    # NDSI Visualization
+    # NDSI Visualization with a snow mask.
     ndsi = sentinel_collection.select('NDSI')
-
-    # Crear máscara para que solo se muestre nieve y el resto sea transparente
-    snow_mask = ndsi.gte(0.4)  # Se considera nieve cuando NDSI > 0.4
-
-    # Aplicar la máscara de nieve sobre el índice NDSI
+    snow_mask = ndsi.gte(0.4)  # Consider snow when NDSI > 0.4
     ndsi_masked = ndsi.updateMask(snow_mask)
-
-    # Parámetros de visualización: Nieve en Azul brillante
     ndsi_vis_params = {
         'min': 0.0,
         'max': 1.0,
-        'palette': ['#0000FF']  # Azul brillante para la nieve
+        'palette': ['#0000FF']  # Brilliant blue for snow
     }
     m.add_ee_layer(ndsi_masked, ndsi_vis_params, 'Sentinel-2 NDSI')
 
@@ -154,34 +144,39 @@ def create_map(center_coords, sentinel_collection, era5_collection, vis_params):
         marker_style = {'color': 'red'}  # Marker style (red points)
         m.addLayer(feature_collection, marker_style, f"Point ({lat}, {lon})")
 
-    # Add rectangles of 100x100m
+    # Add 100x100 meter rectangles around the locations.
     add_rectangles_to_map(m, LOCATIONS)
 
-    m.addLayerControl() # Add Layer control for interactive layer management
+    # Add layer control to toggle layers.
+    m.addLayerControl()
     return m
 
 def save_map(m, filename):
     """
-    Saves the map to an HTML file.
-    :param m: geemap.Map
-        Object to be saved.
-    :param filename: str
-        Name of the HTML file where the map will be saved.
-    :return: str
-        Absolute path to the saved HTML file.
+    Saves a geemap.Map object as an HTML file.
+
+    Args:
+        m (geemap.Map): The map object to be saved.
+        filename (str): The desired filename for the HTML file.
+
+    Returns:
+        str: The absolute path to the saved HTML file.
     """
     html_file = os.path.abspath(filename)
-    m.to_html(html_file, width="100%", height="98vh")  # Ajusta el tamaño al 100%
+    m.to_html(html_file, width="100%", height="98vh")
     m.save(html_file)
     print(f"Map saved as '{html_file}'")
     return html_file
 
 def open_map(html_file):
     """
-    Opens the HTML file in Google Chrome.
-    :param html_file: str
-        Absolute path to the HTML file to be opened.
-    :return: None
+    Opens the specified HTML file in Google Chrome.
+
+    Args:
+        html_file (str): The absolute path to the HTML file.
+
+    Returns:
+        None
     """
     chrome_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe" # Root to Google Chrome
     try:

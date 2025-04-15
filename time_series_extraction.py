@@ -8,21 +8,20 @@ from processing import calculate_indices, mask_s2_clouds
 from point_extraction import extract_point_values, extract_region_values
 from config import END_DATE
 
-TIME_INTERVAL = 7 # Days (weekly data)
+TIME_INTERVAL = 7 # Time interval in days for weekly aggregation
 
 def get_weekly_image_collection(aoi, start_date, end_date=END_DATE):
     """
     Retrieves a Sentinel-2 image collection filtered by the given Area of Interest (AOI)
     and time range. The collection is pre-processed to calculate vegetation and water indices.
 
-    :param aoi: ee.Geometry
-        The Area of Interest (AOI) to filter the satellite image collection.
-    :param start_date: str
-        Start date in "YYYY-MM-DD" format (default: first available Sentinel-2 data in 2015).
-    :param end_date: str
-        End date in "YYYY-MM-DD" format (default: today's date).
-    :return: ee.ImageCollection
-        A collection of Sentinel-2 images with additional calculated indices (NDVI, NDMI, NDWI, NDSI).
+    Args:
+        aoi (ee.Geometry): The Area of Interest used for filtering the image collection.
+        start_date (str): Start date in "YYYY-MM-DD" format.
+        end_date (str): End date in "YYYY-MM-DD" format (defaults to today's date as defined in config).
+
+    Returns:
+        ee.ImageCollection: A Sentinel-2 image collection with calculated indices, containing only the selected bands.
     """
     collection = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED") \
         .filterDate(start_date, end_date) \
@@ -38,22 +37,34 @@ def get_weekly_image_collection(aoi, start_date, end_date=END_DATE):
 
 def calculate_ndmi(image):
     """
-    Calculates NDMI for a given image.
-    :param image: ee.Image
-        Sentinel-2 image to calculate indices from.
-    :return: ee.Image
-        Map with an additional index bands.
-    """
-    # NDMI (Normalized Difference Moisture Index)
-    ndmi = image.normalizedDifference(['B8', 'B11']).rename('NDMI')
+    Calculates the Normalized Difference Moisture Index (NDMI) for a given Sentinel-2 image.
 
+    Args:
+        image (ee.Image): A Sentinel-2 image to compute indices from.
+
+    Returns:
+        ee.Image: The input image with an additional band named 'NDMI'.
+    """
+    ndmi = image.normalizedDifference(['B8', 'B11']).rename('NDMI')
     return image.addBands([ndmi]) # Add indices as a new bands to the image
 
 def get_monthly_composites(aoi, start_year, end_year, index=None):
     """
-    Genera una lista de imágenes compuestas para cada mes desde start_year hasta end_year.
-    Cada imagen se obtiene filtrando la colección Sentinel-2, aplicando la máscara de nubes,
-    calculando los índices y tomando la mediana de los valores.
+    Generates a list of monthly composite images for the specified period.
+    Each composite is produced by filtering the Sentinel-2 collection for a given month,
+    applying the NDMI calculation (or any other index if specified), and taking the median.
+
+    Args:
+        aoi (ee.Geometry): The Area of Interest.
+        start_year (int): The starting year.
+        end_year (int): The ending year.
+        index (str, optional): If specified, only that band is selected from the median composite.
+
+    Returns:
+        tuple: A tuple containing three lists:
+            - composites (list of ee.Image): The monthly Sentinel-2 composite images.
+            - composites_era (list of ee.Image): The monthly ERA5 composite images.
+            - dates (list of str): The date (as a string) corresponding to each composite.
     """
     composites = []
     composites_era = []
@@ -63,37 +74,34 @@ def get_monthly_composites(aoi, start_year, end_year, index=None):
 
     while current <= end_date:
         start_str = current.strftime('%Y-%m-%d')
-        # Definir el final del mes (para evitar cálculos complejos, se utiliza la aproximación de
-        # avanzar al mes siguiente y luego restar 1 segundo, o simplemente usar filterDate)
+        # Define the end of the month by moving to the start of the next month
         if current.month == 12:
             next_month = datetime.datetime(current.year + 1, 1, 1)
         else:
             next_month = datetime.datetime(current.year, current.month + 1, 1)
         end_str = next_month.strftime('%Y-%m-%d')
 
-        # Filtrar la colección para el periodo del mes y el AOI de la Laguna de Gallocanta
+        # Filter the Sentinel-2 collection and compute NDMI
         collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
             .filterDate(start_str, end_str) \
             .filterBounds(aoi) \
             .map(calculate_ndmi)
-            #.map(mask_s2_clouds) \
-            #.map(calculate_indices)
+            # Optionally, add: .map(mask_s2_clouds) or .map(calculate_indices)
 
+        # Filter the ERA5 collection for the same period and AOI
         collection_era = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY") \
             .filter(ee.Filter.date(start_str, end_str)) \
             .filter(ee.Filter.bounds(aoi)) \
             .select("volumetric_soil_water_layer_4")
 
-        # Verificar el tamaño de las colecciones
+        # Print the number of images available for debugging
         size_s2 = collection.size().getInfo()
         size_era = collection_era.size().getInfo()
-        print(f"\r{start_str} - Sentinel-2: {size_s2} imágenes, ERA5: {size_era} imágenes.", end="", flush=True)
+        print(f"\r{start_str} - Sentinel-2: {size_s2} images, ERA5: {size_era} images.", end="", flush=True)
 
         if index:
-            # Crear una imagen compuesta (por ejemplo, la mediana de las imágenes del mes)
             composite = collection.median().select(index)
             composite_era = collection_era.median()
-            # Puedes añadir metadatos o etiquetar la imagen con la fecha si lo deseas
             composites.append(composite)
             composites_era.append(composite_era)
         else:
@@ -103,7 +111,6 @@ def get_monthly_composites(aoi, start_year, end_year, index=None):
             composites_era.append(composite_era)
 
         dates.append(start_str)
-        # Pasar al siguiente mes
         current = next_month
 
     print("\n")
@@ -111,25 +118,22 @@ def get_monthly_composites(aoi, start_year, end_year, index=None):
 
 def extract_time_series(image_collection, locations, bands, scale, start_date, dataset_name, time_interval=TIME_INTERVAL):
     """
-    Extracts time-series data from Sentinel-2 or ERA5-Land for the selected locations.
-    The function retrieves weekly aggregated values (median for Sentinel, mean for ERA5) for each band.
+    Extracts time-series data from a satellite image collection for specified geographic points.
 
-    :param image_collection: ee.ImageCollection
-        The satellite image collection to process.
-    :param locations: list of tuples
-        List of geographic coordinates (latitude, longitude) for the points of interest.
-    :param bands: list of str
-        List of bands/variables to extract.
-    :param scale: int
-        Spatial resolution for data extraction (e.g., 10m for Sentinel-2, 9000m for ERA5-Land).
-    :param start_date: str
-        Start date for extracting time series.
-    :param dataset_name: str
-        Name of the dataset (e.g., "Sentinel-2", "ERA5-Land") for progress display.
-    :param time_interval: int, optional
-        Time interval in days (default: 7 for weekly aggregation).
-    :return: list of dicts
-        A list of dictionaries containing date, coordinates, and extracted index values.
+    The function aggregates images using a median (for Sentinel-2) or mean (for ERA5-Land),
+    and then extracts pixel values at the given locations, along with values averaged over small regions.
+
+    Args:
+        image_collection (ee.ImageCollection): The image collection to process.
+        locations (list of tuple): List of (latitude, longitude) pairs.
+        bands (list of str): List of bands/indices to extract.
+        scale (int): Spatial resolution (in meters) for extraction.
+        start_date (str): Start date ("YYYY-MM-DD") for time-series extraction.
+        dataset_name (str): Name of the dataset (used for progress messages).
+        time_interval (int, optional): Number of days for each aggregation interval.
+
+    Returns:
+        list of dict: A list of dictionaries with extracted values for each point and time interval.
     """
     results = []
     start = datetime.datetime.strptime(start_date, "%Y-%m-%d")
@@ -144,7 +148,7 @@ def extract_time_series(image_collection, locations, bands, scale, start_date, d
     num_images = 0
     progress = 0
 
-    # Function to update the elapsed time in a separate thread
+    # Function to update elapsed time progress in a separate thread.
     def update_timer():
         nonlocal elapsed_time
         while not stop_timer:
@@ -168,6 +172,7 @@ def extract_time_series(image_collection, locations, bands, scale, start_date, d
             date_str,
             (start + datetime.timedelta(days=time_interval)).strftime("%Y-%m-%d")
         )
+        # Use median for Sentinel-2 and mean for ERA5-Land
         image = filtered.median() if dataset_name == "Sentinel-2" else filtered.mean()  # Sentinel-2 uses median, ERA5 uses mean
 
         num_images = filtered.size().getInfo()  # Get number of images in the filtered collection
@@ -209,13 +214,14 @@ def extract_time_series(image_collection, locations, bands, scale, start_date, d
 
 def save_to_csv(data, filename="time_series.csv"):
     """
-    Saves the extracted time-series data into a CSV file.
+    Saves the extracted time-series data to a CSV file.
 
-    :param data: list of dicts
-        The extracted data containing time-series index values.
-    :param filename: str
-        The name of the output CSV file (default: "time_series.csv").
-    :return: None
+    Args:
+        data (list of dict): The time-series data.
+        filename (str): The output CSV filename.
+
+    Returns:
+        None
     """
     if not data:
         print("No data available to save.")
