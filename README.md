@@ -128,7 +128,7 @@ El proceso de análisis satelital en este proyecto sigue los siguientes pasos:
    - Se crean animaciones GIF a partir de composiciones mensuales de la zona de **Gallocanta**.
    - Cada fotograma del GIF incluye leyendas, fechas y un marcador, y se pueden fusionar múltiples GIFs mediatne un menú.
 
-## 📊 **Visualización de Series Temporales**
+## **Visualización de Series Temporales**
 Los gráficos generados por **Plotly** permiten:
 
 - **Visualizar la evolución de índices de vegetación** en cada punto.
