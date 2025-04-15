@@ -2,7 +2,7 @@ import ee
 import time
 
 # Name of the Google Earth Engine project. Replace with your project name if needed.
-USER_PROJECT = "ee-dremon"
+USER_PROJECT = ""
 
 def authenticate_earth_engine():
     """
