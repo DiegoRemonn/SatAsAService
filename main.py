@@ -54,6 +54,9 @@ def extract_time_series_data(image_collection, era5_collection):
     Args:
         image_collection (ee.ImageCollection): Weekly Sentinel-2 image collection.
         era5_collection (ee.ImageCollection): ERA5-Land image collection.
+
+    Returns:
+        None
     """
     print("📊 Extracting time-series data...")
     # Extract time-series data for Sentinel-2 using selected locations and indices.
@@ -69,6 +72,9 @@ def extract_time_series_data(image_collection, era5_collection):
 def generate_time_series_plots():
     """
     Generates time-series plots from previously saved CSV files.
+
+    Returns:
+        None
     """
     print("\nGenerating time-series plots...")
     plot_indices_per_point("sentinel_time_series.csv")  # View all indices in each point
@@ -82,6 +88,9 @@ def create_interactive_map(collection, era5_coll):
     Args:
         collection (ee.Image): Processed Sentinel-2 image collection.
         era5_coll (ee.Image): Processed ERA5-Land image collection.
+
+    Returns:
+        None
     """
     print("🗺️ Creating and saving the map...")
 
@@ -114,6 +123,9 @@ def create_interactive_map(collection, era5_coll):
 def generate_gifs():
     """
     Generates monthly composites from the Gallocanta AOI and creates GIFs based on NDMI and ERA5 palettes.
+
+    Returns:
+        None
     """
     print("🗺️ Getting the monthly composites...")
     composites, composites_era, dates = get_monthly_composites(GALLOCANTA_AOI, start_year=2018, end_year=2024,
@@ -159,14 +171,37 @@ def generate_gifs():
 
 def merge_gifs_menu():
     """
-    Merges two specified GIF files into a single GIF.
+    Prompts the user to enter the file paths of the GIFs to be merged,
+    and then merges them into a single animated GIF.
+
+    Returns:
+        None
     """
-    merge_gifs("laguna_gallocanta_evolucion_pe_(1).gif", "laguna_gallocanta_evolucion_pe_(2).gif",
-               "gif_unido.gif", duration=10)
+    # Prompt user to input GIF file paths separated by commas.
+    files = input("Enter the file paths of the GIFs to merge, separated by commas:\n")
+    gif_list = [file.strip() for file in files.split(",") if file.strip()]
+
+    if not gif_list:
+        print("⚠️ No valid GIF file paths were provided.")
+        return
+
+    # Ask for the output file path.
+    output = input("Enter the output file path for the merged GIF (e.g., merged.gif):\n")
+    # Ask for duration for each frame.
+    try:
+        duration = float(input("Enter the duration (in seconds) for each frame in the merged GIF (e.g., 0.1):\n"))
+    except ValueError:
+        print("Invalid duration entered. Using default duration of 0.1 seconds.")
+        duration = 0.1
+
+    merge_gifs(gif_list, output, duration)
 
 def run_all():
     """
     Executes the complete process by running all the defined tasks in sequence.
+
+    Returns:
+        None
     """
     print("🚀 Starting complete process...")
     collection, era5_coll, image_collection, era5_collection = process_satellite_data()

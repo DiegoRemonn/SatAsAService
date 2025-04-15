@@ -304,22 +304,24 @@ def create_gif_from_urls(urls, dates, legend_palette, aoi, output_filename='lagu
     imageio.mimsave(output_filename, images, duration=duration)
     print(f"GIF created and saved as {output_filename}")
 
-def merge_gifs(gif1_path, gif2_path, output_path, duration=0.1):
+def merge_gifs(gif_paths, output_path, duration=0.1):
     """
-    Merges two GIFs consecutively into a single animated GIF.
+    Merges multiple GIFs consecutively into a single animated GIF.
 
     Args:
-        gif1_path (str): File path to the first GIF.
-        gif2_path (str): File path to the second GIF.
+        gif_paths (list of str): List of file paths for the GIFs to merge.
         output_path (str): File path for the output merged GIF.
         duration (float): Duration (in seconds) each frame is displayed in the final GIF.
+
+    Returns:
+        None
     """
-    frames_gif1 = imageio.mimread(gif1_path)
-    frames_gif2 = imageio.mimread(gif2_path)
-
-    # Concatenate the frames
-    all_frames = frames_gif1 + frames_gif2
-
-    # Save the final GIF
+    all_frames = []
+    for path in gif_paths:
+        try:
+            frames = imageio.mimread(path)
+            all_frames.extend(frames)
+        except Exception as e:
+            print(f"Error reading {path}: {e}")
     imageio.mimsave(output_path, all_frames, duration=duration)
     print(f"Merged GIF saved at {output_path}")
