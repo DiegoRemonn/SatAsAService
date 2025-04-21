@@ -96,7 +96,6 @@ Al ejecutar, se mostrará un menú interactivo con las siguientes opciones:
 
 8. **Salir**  
    - Finaliza el programa.
-   - 
 > ### 📝 NOTA:
 > Algunos pasos tienen dependencias lógicas; por ejemplo, las opciones 2, 3 y 4 requieren que se ejecute la opción 1, y la opción 3 también requiere que se haya ejecutado la opción 2.
 
